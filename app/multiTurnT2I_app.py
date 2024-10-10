@@ -164,7 +164,7 @@ def reset_last(state):
 if __name__ == '__main__':
     
     # Initialize dialoggen and HunyuanDiT model
-    args, gen, enhancer = inferencer()
+    args, gen, enhancer = inferencer()#初始化模型，返回模型参数，
     strings = get_strings(args.lang)
 
     css = """
@@ -211,7 +211,7 @@ if __name__ == '__main__':
         gr.Markdown(DESCRIPTION)
         gr_state = gr.State([[], []])  # conversation, chat_history
 
-        with gr.Row():
+        with gr.Row():#通过gr.Row()将元素放在同一行
             with gr.Column(scale=1, min_width=1000):
                 with gr.Row():
                     chatbot = gr.Chatbot(elem_id="chatbot", label="DialogGen&HunyuanDiT")
@@ -267,4 +267,4 @@ if __name__ == '__main__':
         clear_btn.click(reset, [], [gr_state, chatbot])
 
     interface = demo
-    interface.launch(server_name="0.0.0.0", server_port=443, share=False)
+    interface.launch(server_name="0.0.0.0", server_port=7077, share=False)

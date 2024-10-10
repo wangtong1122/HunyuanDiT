@@ -40,6 +40,15 @@ class HunYuanDiTBlock(nn.Module):
     """
     A HunYuanDiT block with `add` conditioning.
     """
+    # hidden_size: Transformer主干网络中隐藏层的大小，决定了每个Transformer块中特征表示的维度。
+    # c_emb_size: 条件嵌入的大小，用于在块内调制输入特征，使模型能够将附加信息（如文本嵌入）整合到图像生成过程中。
+    # num_heads: 多头注意力机制中的注意力头数量，允许模型并行关注输入的不同部分。
+    # mlp_ratio: MLP（多层感知器）隐藏层大小与hidden_size的比例，决定了MLP中间层的维度。
+    # text_states_dim: 文本状态的维度，用于交叉注意力机制中。
+    # use_flash_attn: 是否使用FlashAttention，一种优化的注意力机制。
+    # qk_norm: 是否在注意力机制中使用 QK 归一化。
+    # norm_type: 归一化层的类型，可以是"layer" 或 "rms"。
+    # skip: 是否使用跳跃连接，用于长跳跃连接机制。
     def __init__(self,
                  hidden_size,
                  c_emb_size,

@@ -16,7 +16,7 @@ def inferencer():
     # Load models
     gen = End2End(args, models_root_path)
 
-    # Try to enhance prompt
+    # Try to enhance prompt DialogGen 为一个多模态语言模型
     if args.enhance:
         logger.info("Loading DialogGen model (for prompt enhancement)...")
         enhancer = DialogGen(str(models_root_path / "dialoggen"), args.load_4bit)
