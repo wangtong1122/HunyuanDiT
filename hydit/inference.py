@@ -367,7 +367,7 @@ class End2End(object):
         # Arguments: seed
         # ========================================================================
         if seed is None:
-            seed = random.randint(0, 1_000_000)
+            seed = random.randint(0, 1_000_000) #生成随机种子
         if not isinstance(seed, int):
             raise TypeError(f"`seed` must be an integer, but got {type(seed)}")
         generator = set_seeds(seed, device=self.device)
@@ -377,7 +377,7 @@ class End2End(object):
         if width <= 0 or height <= 0:
             raise ValueError(f"`height` and `width` must be positive integers, got height={height}, width={width}")
         logger.info(f"Input (height, width) = ({height}, {width})")
-        if self.infer_mode in ['fa', 'torch']:
+        if self.infer_mode in ['fa', 'torch']:#fa fast attention加速推理
             # We must force height and width to align to 16 and to be an integer.
             target_height = int((height // 16) * 16)
             target_width = int((width // 16) * 16)
@@ -407,6 +407,8 @@ class End2End(object):
             negative_prompt = self.default_negative_prompt
         if not isinstance(negative_prompt, str):
             raise TypeError(f"`negative_prompt` must be a string, but got {type(negative_prompt)}")
+        print(f"正面的提示词: {prompt}")
+        print(f"负面的提示词的: {negative_prompt}")
 
         # ========================================================================
         # Arguments: style. (A fixed argument. Don't Change it.)
@@ -456,6 +458,8 @@ class End2End(object):
         if sampler is not None and sampler != self.sampler:
             self.pipeline, self.sampler = self.load_sampler(sampler)
 
+        #数据输入的pipeline中进行图片生成 pipeline是一个StableDiffusionPipeline对象
+        #StableDiffusionPipelined调用了__call__方法，返回了生成的图片
         samples = self.pipeline(
             height=target_height,
             width=target_width,
