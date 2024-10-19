@@ -407,8 +407,8 @@ class End2End(object):
             negative_prompt = self.default_negative_prompt
         if not isinstance(negative_prompt, str):
             raise TypeError(f"`negative_prompt` must be a string, but got {type(negative_prompt)}")
-        print(f"正面的提示词: {prompt}")
-        print(f"负面的提示词的: {negative_prompt}")
+        logger.info(f"正面的22提示词: {prompt}")
+        logger.info(f"负面的22提示词的{negative_prompt}")
 
         # ========================================================================
         # Arguments: style. (A fixed argument. Don't Change it.)

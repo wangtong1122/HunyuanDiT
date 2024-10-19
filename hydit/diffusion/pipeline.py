@@ -33,8 +33,8 @@ from transformers import BertModel, BertTokenizer
 from transformers import CLIPImageProcessor, CLIPTextModel, CLIPTokenizer
 
 from ..modules.models import HunYuanDiT
-
-logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
+from loguru import logger
+from transformers.modeling_utils import logger as tf_logger
 
 EXAMPLE_DOC_STRING = """
     Examples:
@@ -101,6 +101,7 @@ class StableDiffusionPipeline(DiffusionPipeline, TextualInversionLoaderMixin, Lo
     model_cpu_offload_seq = "text_encoder->unet->vae"
     _optional_components = ["safety_checker", "feature_extractor"]
     _exclude_from_cpu_offload = ["safety_checker"]
+    #定义三个类属性
 
     def __init__(
             self,
@@ -182,7 +183,8 @@ class StableDiffusionPipeline(DiffusionPipeline, TextualInversionLoaderMixin, Lo
             safety_checker=safety_checker,
             feature_extractor=feature_extractor,
         )
-        self.vae_scale_factor = 2 ** (len(self.vae.config.block_out_channels) - 1)
+        self.vae_scale_factor = 2 ** (len(self.vae.config.block_out_channels) - 1)#block_out_channels长度为4 2**3=8
+
         self.image_processor = VaeImageProcessor(vae_scale_factor=self.vae_scale_factor)
         self.register_to_config(requires_safety_checker=requires_safety_checker)
 
@@ -308,12 +310,12 @@ class StableDiffusionPipeline(DiffusionPipeline, TextualInversionLoaderMixin, Lo
             batch_size = len(prompt)
         else:
             batch_size = prompt_embeds.shape[0]
-
+        logger.debug(f"输入prompt消息:{prompt},{prompt_embeds}")
         if prompt_embeds is None:
             # textual inversion: procecss multi-vector tokens if necessary
             if isinstance(self, TextualInversionLoaderMixin):
                 prompt = self.maybe_convert_prompt(prompt, tokenizer)
-
+                logger.debug(f"输入prompt消息convert:{prompt}")
             text_inputs = tokenizer(
                 prompt,
                 padding="max_length",
@@ -322,6 +324,7 @@ class StableDiffusionPipeline(DiffusionPipeline, TextualInversionLoaderMixin, Lo
                 return_attention_mask=True,
                 return_tensors="pt",
             )
+            logger.debug(f"输入消息tokenizer:{text_inputs}")
             text_input_ids = text_inputs.input_ids
             untruncated_ids = tokenizer(prompt, padding="longest", return_tensors="pt").input_ids
 
@@ -341,6 +344,7 @@ class StableDiffusionPipeline(DiffusionPipeline, TextualInversionLoaderMixin, Lo
                 text_input_ids.to(device),
                 attention_mask=attention_mask,
             )
+            logger.debug(f"输入消息embeds:{prompt_embeds}")
             prompt_embeds = prompt_embeds[0]
             attention_mask = attention_mask.repeat(num_images_per_prompt, 1)
         else:
@@ -511,7 +515,7 @@ class StableDiffusionPipeline(DiffusionPipeline, TextualInversionLoaderMixin, Lo
                 f"You have passed a list of generators of length {len(generator)}, but requested an effective batch"
                 f" size of {batch_size}. Make sure the batch size matches the length of the generators."
             )
-
+        logger.debug(f"输入shape消息:{shape}") #1, 4, 128, 128)
         if latents is None:
             latents = randn_tensor(shape, generator=generator, device=device, dtype=dtype)
         else:
@@ -519,6 +523,7 @@ class StableDiffusionPipeline(DiffusionPipeline, TextualInversionLoaderMixin, Lo
 
         # scale the initial noise by the standard deviation required by the scheduler
         latents = latents * self.scheduler.init_noise_sigma
+        logger.debug(f"输入latents消息:{latents}")
         return latents
 
     @torch.no_grad()
@@ -627,6 +632,7 @@ class StableDiffusionPipeline(DiffusionPipeline, TextualInversionLoaderMixin, Lo
                 "not-safe-for-work" (nsfw) content.
         """
         # 1. Check inputs. Raise error if not correct
+        logger.info("有何call")
         self.check_inputs(
             prompt, height, width, callback_steps, negative_prompt, prompt_embeds, negative_prompt_embeds
         )
@@ -649,7 +655,7 @@ class StableDiffusionPipeline(DiffusionPipeline, TextualInversionLoaderMixin, Lo
         text_encoder_lora_scale = (
             cross_attention_kwargs.get("scale", None) if cross_attention_kwargs is not None else None
         )
-
+        #用2种方式编码prompt
         prompt_embeds, negative_prompt_embeds, attention_mask, uncond_attention_mask = \
             self.encode_prompt(prompt,
                                device,
@@ -669,7 +675,7 @@ class StableDiffusionPipeline(DiffusionPipeline, TextualInversionLoaderMixin, Lo
                                prompt_embeds=prompt_embeds_t5,
                                negative_prompt_embeds=negative_prompt_embeds_t5,
                                lora_scale=text_encoder_lora_scale,
-                               embedder=self.embedder_t5,
+                               embedder=self.embedder_t5,#使用t5编码器
                                )
 
         # For classifier free guidance, we need to do two forward passes.
@@ -687,6 +693,8 @@ class StableDiffusionPipeline(DiffusionPipeline, TextualInversionLoaderMixin, Lo
 
         # 6. Prepare latent variables
         num_channels_latents = self.unet.config.in_channels
+        #generator是之前根据随机种子设置的，确保课重复
+        #这里是生成随机噪声
         latents = self.prepare_latents(batch_size * num_images_per_prompt,
                                        num_channels_latents,
                                        height,
@@ -705,7 +713,7 @@ class StableDiffusionPipeline(DiffusionPipeline, TextualInversionLoaderMixin, Lo
         with self.progress_bar(total=num_inference_steps) as progress_bar:
             for i, t in enumerate(timesteps):
                 # expand the latents if we are doing classifier free guidance
-                latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents
+                latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents #do_classifier_free_guidance为真，将latents复制一份
                 latent_model_input = self.scheduler.scale_model_input(latent_model_input, t)
                 # expand scalar t to 1-D tensor to match the 1st dim of latent_model_input
                 t_expand = torch.tensor([t] * latent_model_input.shape[0], device=latent_model_input.device)

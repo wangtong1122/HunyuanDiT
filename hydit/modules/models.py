@@ -18,7 +18,7 @@ from .attn_layers import Attention, FlashCrossMHAModified, FlashSelfMHAModified,
 from .embedders import TimestepEmbedder, PatchEmbed, timestep_embedding
 from .norm_layers import RMSNorm
 from .poolers import AttentionPool
-
+from loguru import logger
 
 def modulate(x, shift, scale):
     return x * (1 + scale.unsqueeze(1)) + shift.unsqueeze(1)
@@ -300,6 +300,19 @@ class HunYuanDiT(ModelMixin, ConfigMixin, PeftAdapterMixin):
         for block in self.blocks:
             block.gradient_checkpointing = False
 
+    # 在pipeline中调用模型前向传播，noise_pred = self.unet(
+    #     latent_model_input,
+    #     t_expand,
+    #     encoder_hidden_states=prompt_embeds,
+    #     text_embedding_mask=attention_mask,
+    #     encoder_hidden_states_t5=prompt_embeds_t5,
+    #     text_embedding_mask_t5=attention_mask_t5,
+    #     image_meta_size=ims,
+    #     style=style,
+    #     cos_cis_img=freqs_cis_img[0],
+    #     sin_cis_img=freqs_cis_img[1],
+    #     return_dict=False,
+    # )
     def forward(self,
                 x,
                 t,
@@ -314,6 +327,7 @@ class HunYuanDiT(ModelMixin, ConfigMixin, PeftAdapterMixin):
                 return_dict=True,
                 controls=None,
                 ):
+       # logger.debug(f"输入的潜在空间向量的形状：{x.shape}") Size([2, 4, 128, 128])
         """
         Forward pass of the encoder.
 
